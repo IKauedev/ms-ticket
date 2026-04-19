@@ -1,4 +1,4 @@
-# 🚀 Spring Boot CI/CD Demo Application
+# 🚀 ms-ticket
 
 [![CI/CD Pipeline](https://github.com/karthikskumar94/spring-boot-cicd/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/karthikskumar94/spring-boot-cicd/actions/workflows/ci-cd.yml)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)](https://hub.docker.com/)
@@ -6,7 +6,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-6DB33F?style=flat&logo=spring&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-17-ED8B00?style=flat&logo=openjdk&logoColor=white)](https://openjdk.org/)
 
-A comprehensive demonstration of CI/CD pipeline implementation using **Spring Boot**, **Docker**, **Kubernetes**, and **GitHub Actions**. This project showcases modern DevOps practices including containerization, orchestration, automated testing, security scanning, and deployment strategies.
+`ms-ticket` is the ticket microservice for a cinema platform. It uses **Spring Boot**, **PostgreSQL**, **Flyway**, **Docker**, **Kubernetes**, and **GitHub Actions** to provide a production-oriented microservice baseline. It now supports **Keycloak OIDC authentication** (OAuth2, token revocation, user roles).
 
 ## 📋 Table of Contents
 
@@ -28,11 +28,14 @@ A comprehensive demonstration of CI/CD pipeline implementation using **Spring Bo
 
 ### 🛠️ Application Features
 - **RESTful API** with Spring Boot 3.2.0
+- **PostgreSQL persistence** with Spring Data JPA
+- **Flyway migrations** for schema versioning
 - **Java 17** with modern language features
 - **Spring Boot Actuator** for health checks and monitoring
 - **Lightweight Alpine-based Docker images**
 - **Multi-stage Docker builds** for optimization
 - **Security best practices** with non-root containers
+- **Keycloak OIDC authentication** (OAuth2, token revocation, user roles)
 
 ### 🔄 DevOps Features
 - **Automated CI/CD pipeline** with GitHub Actions
@@ -55,6 +58,10 @@ A comprehensive demonstration of CI/CD pipeline implementation using **Spring Bo
 ```mermaid
 graph TB
     A[Developer] -->|git push| B[GitHub Repository]
+## 🔐 Security & Authentication
+
+The service uses **Keycloak** for authentication and authorization (OIDC/OAuth2). All endpoints (exceto registro e saúde) requerem token de acesso válido.
+
     B -->|webhook| C[GitHub Actions]
     C -->|test| D[Maven Test Suite]
     C -->|security scan| E[Trivy Scanner]
@@ -67,7 +74,9 @@ graph TB
 ```
 
 ### Technology Stack
-- **Backend**: Spring Boot 3.2.0, Java 17
+- **Backend**: Spring Boot 3.2.0, Java 17, Spring Data JPA
+- **Database**: PostgreSQL 16
+- **Database Migrations**: Flyway
 - **Build Tool**: Apache Maven
 - **Containerization**: Docker with multi-stage builds
 - **Orchestration**: Kubernetes
@@ -81,23 +90,24 @@ graph TB
 - Java 17 or higher
 - Maven 3.6+
 - Docker 20.10+
-- kubectl (for Kubernetes deployment)
+- kubectl 1.28+ with Kustomize support
+- kind, Minikube, or Docker Desktop Kubernetes for local clusters
 - Git
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/karthikskumar94/spring-boot-cicd.git
-cd spring-boot-cicd
+git clone <your-repository-url>
+cd ticket
 ```
 
 ### 2. Run Locally
 ```bash
-# Using Maven
-./mvnw spring-boot:run
+# Using Maven with the local Spring profile
+SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run
 
 # Using Java
 ./mvnw clean package
-java -jar target/spring-boot-cicd-1.0.0.jar
+java -jar target/ms-ticket-1.0.0.jar --spring.profiles.active=local
 ```
 
 ### 3. Test the Application
@@ -120,105 +130,175 @@ curl http://localhost:8080/hello/YourName
 # Package application
 ./mvnw clean package
 
-# Run application
-./mvnw spring-boot:run
+# Run application with the local profile
+SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run
 ```
 
-### Development Profile
-Create `application-dev.yml` for local development:
-```yaml
-server:
-  port: 8080
-logging:
-  level:
-    com.example.demo: DEBUG
-    org.springframework: INFO
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"
-```
+### Spring Profiles
+The project now includes dedicated profiles for each environment:
+
+- `application-local.yml`: more verbose logs and all actuator endpoints exposed for local development
+- `application-homolog.yml`: settings for validation environments
+- `application-prod.yml`: production-safe actuator visibility
+
+Switch profiles with `SPRING_PROFILES_ACTIVE=local|homolog|prod`.
 
 ## 🐳 Docker Usage
 
 ### Build Docker Image
+
 ```bash
 # Build the image
-docker build -t spring-boot-cicd:latest .
+docker build -t ms-ticket:latest .
 
 # Run with Docker
-docker run -p 8080:8080 spring-boot-cicd:latest
+docker run -p 8080:8080 ms-ticket:latest
 
 # Run in background
-docker run -d -p 8080:8080 --name spring-app spring-boot-cicd:latest
+docker run -d -p 8080:8080 --name ms-ticket ms-ticket:latest
 ```
 
-### Docker Compose (Optional)
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  app:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+### Docker Compose with Local Database
+
+There is now a ready-to-use local Compose file at `docker-compose.local.yml`.
+
+1. Copy `.env.docker.example` to `.env` if you want to customize ports, database name, or credentials.
+2. Start the application and PostgreSQL together.
+
+```bash
+docker compose -f docker-compose.local.yml up -d --build
 ```
+
+Useful commands:
+
+```bash
+# Follow logs
+docker compose -f docker-compose.local.yml logs -f
+
+# Stop everything
+docker compose -f docker-compose.local.yml down
+
+# Stop everything and remove the database volume
+docker compose -f docker-compose.local.yml down -v
+```
+
+Default local endpoints:
+
+- Application: `http://localhost:8080`
+- PostgreSQL: `localhost:5432`
+- Database: `ms_ticket`
+- User: `ticket`
+
+Default local authentication setup:
+
+- Admin user: `admin` / `admin12345`
+- Box office user: `boxoffice` / `boxoffice12345`
+- JWT secret: configured by `JWT_SECRET` in `.env`
+
+The application now starts with PostgreSQL, JPA, and Flyway enabled by default. The local Compose file is enough to run the API and the database together.
 
 ### Docker Best Practices Implemented
+
 - ✅ Multi-stage builds for smaller images
 - ✅ Non-root user for security
+- ✅ `.dockerignore` to reduce build context and speed up image builds
+- ✅ Container defaults for `SPRING_PROFILES_ACTIVE` and `JAVA_TOOL_OPTIONS`
 - ✅ Alpine Linux for minimal attack surface
 - ✅ Health checks for container orchestration
 - ✅ Proper layer caching optimization
 
 ## ☸️ Kubernetes Deployment
 
-### Deploy to Kubernetes
-```bash
-# Apply all Kubernetes manifests
-kubectl apply -f k8s/
-
-# Check deployment status
-kubectl get pods -n spring-boot-demo
-
-# Check service
-kubectl get svc -n spring-boot-demo
-
-# Check logs
-kubectl logs -f deployment/spring-boot-app -n spring-boot-demo
+### Kubernetes Layout
+```text
+k8s/
+  base/
+    deployment.yaml
+    service.yaml
+    kustomization.yaml
+  overlays/
+    local/
+    homolog/
+    prod/
 ```
 
-### Using Kustomize
-```bash
-# Deploy with kustomization
-kubectl apply -k k8s/
+- `base`: shared manifests for every environment
+- `overlays/local`: single replica, `imagePullPolicy: Never`, NodePort, and local ingress
+- `overlays/homolog`: validation environment with dedicated namespace and registry image
+- `overlays/prod`: production defaults with higher resources and replica count
 
-# Verify deployment
-kubectl rollout status deployment/spring-boot-app -n spring-boot-demo
+### Deploy Locally with kind
+```bash
+# Create a local cluster once
+kind create cluster --name ms-ticket
+
+# Build the application image with the tag expected by the local overlay
+docker build -t ms-ticket:local .
+
+# Load the image into the kind cluster
+kind load docker-image ms-ticket:local --name ms-ticket
+
+# Deploy the local overlay
+kubectl apply -k k8s/overlays/local
+
+# Wait for rollout
+kubectl rollout status deployment/ms-ticket -n ms-ticket-local
+
+# Access the application
+kubectl get svc -n ms-ticket-local
 ```
 
-### Kubernetes Resources Included
-- **Namespace**: Isolated environment
-- **Deployment**: Application pods with 3 replicas
-- **Service**: Internal load balancing
-- **Service (NodePort)**: External access for testing
-- **Ingress**: HTTP routing (optional)
-- **Kustomization**: Environment management
+You can access the app locally with either of these options:
+
+- NodePort: `http://localhost:30080/`
+- Ingress: `http://ms-ticket.localtest.me/`
+
+### Local Alternative with Minikube
+```bash
+# Start Minikube
+minikube start
+
+# Build and load the image
+docker build -t ms-ticket:local .
+minikube image load ms-ticket:local
+
+# Deploy the local overlay
+kubectl apply -k k8s/overlays/local
+```
+
+### Deploy to Homolog and Production
+Update the registry name defined in these files before deploying:
+
+- `k8s/overlays/homolog/kustomization.yaml`
+- `k8s/overlays/prod/kustomization.yaml`
+
+Then build, push, and apply the desired overlay:
+
+```bash
+# Example image
+docker build -t ghcr.io/your-org/ms-ticket:1.0.0 .
+docker push ghcr.io/your-org/ms-ticket:1.0.0
+
+# Update the overlay tag or let CI do it for you
+kubectl apply -k k8s/overlays/homolog
+kubectl apply -k k8s/overlays/prod
+```
+
+Recommended CI/CD flow:
+
+1. Run `mvn test`
+2. Build and push an immutable image tag such as the Git SHA
+3. Update the target overlay image tag
+4. Run `kubectl apply -k` for `homolog` or `prod`
+5. Wait for `kubectl rollout status`
 
 ### Production Considerations
-- **Resource Limits**: CPU and memory constraints
-- **Health Probes**: Liveness and readiness checks
-- **Rolling Updates**: Zero-downtime deployments
-- **Horizontal Scaling**: Automatic pod scaling
-- **Security Context**: Non-root containers
+- **Container Registry**: use GHCR, Docker Hub, ACR, ECR, or another accessible registry
+- **Ingress Controller**: install NGINX Ingress or Traefik in the cluster
+- **TLS**: use cert-manager for HTTPS certificates
+- **Secrets**: keep credentials in Kubernetes Secrets or an external secret manager
+- **Observability**: collect metrics, logs, and alerts before going live
+- **Autoscaling**: add HPA after defining realistic CPU and memory requests
 
 ## 🔄 CI/CD Pipeline
 
@@ -286,6 +366,8 @@ KUBE_CONFIG=base64-encoded-kubeconfig
 
 #### Application Security
 - ✅ Spring Boot security defaults
+- ✅ JWT bearer token authentication
+- ✅ Role-based authorization for ticket endpoints
 - ✅ Actuator endpoint security
 - ✅ Input validation
 - ✅ Error handling
@@ -303,9 +385,15 @@ docker run --rm -v $(pwd):/workspace aquasec/trivy fs /workspace
 
 | Method | Endpoint | Description | Example Response |
 |--------|----------|-------------|------------------|
-| GET | `/` | Welcome message with timestamp | `"Hello from Spring Boot CI/CD Demo! Time: 2024-01-15T10:30:00"` |
-| GET | `/health` | Simple health check | `"Application is healthy!"` |
-| GET | `/hello/{name}` | Personalized greeting | `"Hello John! Welcome to CI/CD Pipeline Demo!"` |
+| GET | `/` | Service status with timestamp | `"ms-ticket is running. Time: 2026-04-18T19:30:00"` |
+| GET | `/health` | Simple health check | `"ms-ticket is healthy!"` |
+| GET | `/hello/{name}` | Simple greeting endpoint | `"Hello John! Welcome to ms-ticket."` |
+| POST | `/api/auth/register` | Create a customer user | JSON object |
+| POST | `/api/auth/login` | Authenticate and receive JWT | JSON object |
+| GET | `/api/auth/me` | Return the authenticated user profile | JSON object |
+| GET | `/api/tickets` | List sold or reserved tickets | JSON array |
+| GET | `/api/tickets/{id}` | Fetch one ticket by id | JSON object |
+| POST | `/api/tickets` | Create a new ticket | JSON object |
 
 ### Actuator Endpoints (Management)
 
@@ -323,6 +411,28 @@ curl http://localhost:8080/
 curl http://localhost:8080/health
 curl http://localhost:8080/hello/Developer
 
+# Get a JWT token for a bootstrap box office user
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username":"boxoffice",
+    "password":"boxoffice12345"
+  }'
+
+# Create a ticket with the JWT from the login response
+curl -X POST http://localhost:8080/api/tickets \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "screeningId":"screening-001",
+    "movieName":"Interstellar",
+    "sessionTime":"2030-04-18T20:00:00Z",
+    "seatNumber":"A10",
+    "customerName":"Kaue",
+    "price":32.50,
+    "status":"PURCHASED"
+  }'
+
 # Test actuator endpoints
 curl http://localhost:8080/actuator/health
 curl http://localhost:8080/actuator/info
@@ -338,7 +448,10 @@ server:
   
 spring:
   application:
-    name: spring-boot-cicd
+    name: ms-ticket
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ms_ticket}
+    username: ${DB_USERNAME:ticket}
     
 management:
   endpoints:
@@ -356,25 +469,46 @@ logging:
 
 ### Environment-Specific Configurations
 
-#### Docker Profile
+#### Local Profile
 ```yaml
 spring:
-  profiles: docker
+  jpa:
+    show-sql: true
+      jwt:
+        issuer: ms-ticket
+        expiration-minutes: 120
+        secret: ${JWT_SECRET:replace-me}
+      bootstrap:
+        enabled: ${BOOTSTRAP_USERS_ENABLED:false}
+        admin-username: ${ADMIN_USERNAME:admin}
+        box-office-username: ${BOX_OFFICE_USERNAME:boxoffice}
+
+  ### Authorization Rules
+
+  - Public: `/`, `/health`, `/hello/**`, `/api/auth/login`, `/api/auth/register`
+  - Authenticated: `/api/auth/me`
+  - Roles `ADMIN` or `BOX_OFFICE`: `/api/tickets/**`
+
+  ### Added Libraries
+
+  - `spring-boot-starter-security`: base authentication and authorization support
+  - `spring-boot-starter-oauth2-resource-server`: bearer token and JWT resource server support
+  - `spring-security-test`: security-aware controller tests
+  - `spring-boot-starter-data-jpa`: persistence layer
+  - `postgresql`: JDBC driver for PostgreSQL
+  - `flyway-core`: database versioning and migration execution
+
 logging:
   level:
-    root: WARN
-    com.example.demo: INFO
+    com.example.demo: DEBUG
 ```
 
-#### Kubernetes Profile
+#### Production Profile
 ```yaml
 spring:
-  profiles: kubernetes
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus
+  datasource:
+    hikari:
+      maximum-pool-size: 15
 ```
 
 ## 📊 Monitoring & Health Checks
@@ -410,8 +544,8 @@ management:
 ### Test Structure
 ```
 src/test/java/com/example/demo/
-├── HelloControllerTest.java    # Controller unit tests
-└── DemoApplicationTests.java   # Integration tests
+├── StatusControllerTest.java   # Status endpoint tests
+└── ticket/TicketControllerTest.java
 ```
 
 ### Running Tests
@@ -420,7 +554,7 @@ src/test/java/com/example/demo/
 ./mvnw test
 
 # Run specific test class
-./mvnw test -Dtest=HelloControllerTest
+./mvnw test -Dtest=StatusControllerTest
 
 # Run tests with coverage
 ./mvnw test jacoco:report

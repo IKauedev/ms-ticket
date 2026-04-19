@@ -1,0 +1,21 @@
+spring:
+  jpa:
+    show-sql: false
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+
+app:
+  security:
+    bootstrap:
+      enabled: false
+
+logging:
+  level:
+    root: INFO
+    com.example.demo: INFO
+
+management:
+  endpoint:
+    health:
+      show-details: always

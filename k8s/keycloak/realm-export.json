@@ -1,0 +1,45 @@
+{
+  "realm": "ms-ticket",
+  "enabled": true,
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "admin12345" }],
+      "realmRoles": ["ADMIN"]
+    },
+    {
+      "username": "boxoffice",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "boxoffice12345" }],
+      "realmRoles": ["BOX_OFFICE"]
+    },
+    {
+      "username": "customer",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "customer12345" }],
+      "realmRoles": ["CUSTOMER"]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "ms-ticket",
+      "secret": "secret",
+      "enabled": true,
+      "publicClient": false,
+      "redirectUris": ["http://localhost:8080/login/oauth2/code/keycloak"],
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": true
+    }
+  ],
+  "roles": {
+    "realm": [
+      { "name": "ADMIN" },
+      { "name": "BOX_OFFICE" },
+      { "name": "CUSTOMER" }
+    ]
+  }
+}

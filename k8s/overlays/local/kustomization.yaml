@@ -1,0 +1,44 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ms-ticket-local
+
+resources:
+  - ../../base
+  - ../../keycloak
+  - keycloak-realm-export-configmap.yaml
+  - namespace.yaml
+  - service-nodeport.yaml
+  - ingress.yaml
+  - postgres.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: ms-ticket-config
+    literals:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=ms_ticket
+      - DB_USERNAME=ticket
+      - BOOTSTRAP_USERS_ENABLED=true
+      - ADMIN_USERNAME=admin
+      - BOX_OFFICE_USERNAME=boxoffice
+
+secretGenerator:
+  - name: ms-ticket-secret
+    literals:
+      - DB_PASSWORD=ticket123
+      - JWT_SECRET=ms-ticket-local-development-secret-2026-secure-key
+      - ADMIN_PASSWORD=admin12345
+      - BOX_OFFICE_PASSWORD=boxoffice12345
+
+patches:
+  - path: patch-deployment.yaml
+  - path: keycloak-patch-service-nodeport.yaml
+
+images:
+  - name: ms-ticket
+    newName: ms-ticket
+    newTag: local

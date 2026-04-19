@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ms-ticket-homolog
+
+resources:
+  - ../../base
+  - namespace.yaml
+  - ingress.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: ms-ticket-config
+    literals:
+      - DB_HOST=postgres-homolog.example.internal
+      - DB_PORT=5432
+      - DB_NAME=ms_ticket
+      - DB_USERNAME=ticket
+      - BOOTSTRAP_USERS_ENABLED=false
+
+secretGenerator:
+  - name: ms-ticket-secret
+    literals:
+      - DB_PASSWORD=replace-me-in-homolog
+      - JWT_SECRET=replace-with-a-strong-homolog-secret
+
+patches:
+  - path: patch-deployment.yaml
+
+images:
+  - name: ms-ticket
+    newName: ghcr.io/your-org/ms-ticket
+    newTag: hml-latest

@@ -1,3 +1,11 @@
+.git
+.github
+.vscode
+target
+k8s
+README.md
+*.log
+docker-compose*.yml
 target/
 .git/
 .gitignore

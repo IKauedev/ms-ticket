@@ -1,0 +1,22 @@
+spring:
+  jpa:
+    show-sql: true
+
+app:
+  security:
+    bootstrap:
+      enabled: true
+
+logging:
+  level:
+    com.example.demo: DEBUG
+    org.hibernate.SQL: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ms-ticket:compose-local
+    container_name: ms-ticket-local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-ms_ticket}
+      DB_USERNAME: ${DB_USERNAME:-ticket}
+      DB_PASSWORD: ${DB_PASSWORD:-ticket123}
+      JWT_SECRET: ${JWT_SECRET:-ms-ticket-local-development-secret-2026-secure-key}
+      BOOTSTRAP_USERS_ENABLED: ${BOOTSTRAP_USERS_ENABLED:-true}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin12345}
+      BOX_OFFICE_USERNAME: ${BOX_OFFICE_USERNAME:-boxoffice}
+      BOX_OFFICE_PASSWORD: ${BOX_OFFICE_PASSWORD:-boxoffice12345}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-local
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ms_ticket}
+      POSTGRES_USER: ${DB_USERNAME:-ticket}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ticket123}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USERNAME:-ticket} -d ${DB_NAME:-ms_ticket}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

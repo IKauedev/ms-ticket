@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+
+labels:
+  - includeSelectors: true
+    includeTemplates: true
+    pairs:
+      app.kubernetes.io/name: ms-ticket
+      app.kubernetes.io/part-of: cinema-platform
+      app.kubernetes.io/component: api
+
+images:
+  - name: ms-ticket
+    newName: ms-ticket
+    newTag: 0.1.0

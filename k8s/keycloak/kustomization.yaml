@@ -1,0 +1,6 @@
+resources:
+  - keycloak-deployment.yaml
+  - keycloak-service.yaml
+  - keycloak-postgres-deployment.yaml
+  - keycloak-postgres-service.yaml
+  - keycloak-realm-export-configmap.yaml
