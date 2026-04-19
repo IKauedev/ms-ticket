@@ -57,6 +57,8 @@
 ```mermaid
 graph TB
     A[Developer] -->|git push| B[GitHub Repository]
+
+
 ## 🔐 Security & Authentication
 
 The service uses **Keycloak** for authentication and authorization (OIDC/OAuth2). All endpoints (exceto registro e saúde) requerem token de acesso válido.
@@ -628,12 +630,6 @@ We welcome contributions! Please follow these guidelines:
 ## 📝 License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
-## 👨‍💻 Author
-
-**Karthik Kumar** - [karthikskumar94](https://github.com/karthikskumar94)
-
----
 
 ## ⭐ Star This Repository
 
