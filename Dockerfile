@@ -12,7 +12,7 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
-ENV SPRING_PROFILES_ACTIVE=prod
+ENV SPRING_PROFILES_ACTIVE=local
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
 
 # Create non-root user for security

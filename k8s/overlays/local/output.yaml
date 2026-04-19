@@ -1,0 +1,356 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    name: ms-ticket-local
+  name: ms-ticket-local
+---
+apiVersion: v1
+binaryData:
+  realm-export.json: '{{REALM_EXPORT_BASE64}}'
+kind: ConfigMap
+metadata:
+  labels:
+    app: keycloak
+  name: keycloak-realm-export
+  namespace: ms-ticket-local
+---
+apiVersion: v1
+data:
+  ADMIN_USERNAME: admin
+  BOOTSTRAP_USERS_ENABLED: "true"
+  BOX_OFFICE_USERNAME: boxoffice
+  DB_HOST: postgres
+  DB_NAME: ms_ticket
+  DB_PORT: "5432"
+  DB_USERNAME: ticket
+kind: ConfigMap
+metadata:
+  name: ms-ticket-config
+  namespace: ms-ticket-local
+---
+apiVersion: v1
+data:
+  ADMIN_PASSWORD: YWRtaW4xMjM0NQ==
+  BOX_OFFICE_PASSWORD: Ym94b2ZmaWNlMTIzNDU=
+  DB_PASSWORD: dGlja2V0MTIz
+  JWT_SECRET: bXMtdGlja2V0LWxvY2FsLWRldmVsb3BtZW50LXNlY3JldC0yMDI2LXNlY3VyZS1rZXk=
+kind: Secret
+metadata:
+  name: ms-ticket-secret
+  namespace: ms-ticket-local
+type: Opaque
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: ms-ticket-local
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: keycloak
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-postgres
+  namespace: ms-ticket-local
+spec:
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: keycloak-postgres
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-ticket-nodeport
+  namespace: ms-ticket-local
+spec:
+  ports:
+  - nodePort: 30080
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: ms-ticket
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ms-ticket
+    app.kubernetes.io/component: api
+    app.kubernetes.io/name: ms-ticket
+    app.kubernetes.io/part-of: cinema-platform
+  name: ms-ticket-service
+  namespace: ms-ticket-local
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: ms-ticket
+    app.kubernetes.io/component: api
+    app.kubernetes.io/name: ms-ticket
+    app.kubernetes.io/part-of: cinema-platform
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: ms-ticket-local
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: postgres
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: ms-ticket-local
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: keycloak
+  name: keycloak
+  namespace: ms-ticket-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - args:
+        - start-dev
+        - --import-realm
+        env:
+        - name: KEYCLOAK_ADMIN
+          value: admin
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          value: admin
+        - name: KC_DB
+          value: postgres
+        - name: KC_DB_URL
+          value: jdbc:postgresql://keycloak-postgres:5432/keycloak
+        - name: KC_DB_USERNAME
+          value: keycloak
+        - name: KC_DB_PASSWORD
+          value: keycloak
+        image: quay.io/keycloak/keycloak:24.0.3
+        name: keycloak
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - mountPath: /opt/keycloak/data/import
+          name: realm-export
+      volumes:
+      - configMap:
+          name: keycloak-realm-export
+        name: realm-export
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: keycloak-postgres
+  name: keycloak-postgres
+  namespace: ms-ticket-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak-postgres
+  template:
+    metadata:
+      labels:
+        app: keycloak-postgres
+    spec:
+      containers:
+      - env:
+        - name: POSTGRES_DB
+          value: keycloak
+        - name: POSTGRES_USER
+          value: keycloak
+        - name: POSTGRES_PASSWORD
+          value: keycloak
+        image: postgres:16
+        name: postgres
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgres-data
+      volumes:
+      - emptyDir: {}
+        name: postgres-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ms-ticket
+    app.kubernetes.io/component: api
+    app.kubernetes.io/name: ms-ticket
+    app.kubernetes.io/part-of: cinema-platform
+  name: ms-ticket
+  namespace: ms-ticket-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-ticket
+      app.kubernetes.io/component: api
+      app.kubernetes.io/name: ms-ticket
+      app.kubernetes.io/part-of: cinema-platform
+  template:
+    metadata:
+      labels:
+        app: ms-ticket
+        app.kubernetes.io/component: api
+        app.kubernetes.io/name: ms-ticket
+        app.kubernetes.io/part-of: cinema-platform
+    spec:
+      containers:
+      - env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: local
+        envFrom:
+        - configMapRef:
+            name: ms-ticket-config
+        - secretRef:
+            name: ms-ticket-secret
+        image: ms-ticket:local
+        imagePullPolicy: Never
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        name: ms-ticket
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 250m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: postgres
+  name: postgres
+  namespace: ms-ticket-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - env:
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              key: DB_NAME
+              name: ms-ticket-config
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              key: DB_USERNAME
+              name: ms-ticket-config
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: DB_PASSWORD
+              name: ms-ticket-secret
+        image: postgres:16-alpine
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+          initialDelaySeconds: 20
+          periodSeconds: 20
+        name: postgres
+        ports:
+        - containerPort: 5432
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgres-data
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-data
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  name: ms-ticket
+  namespace: ms-ticket-local
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: ms-ticket.localtest.me
+    http:
+      paths:
+      - backend:
+          service:
+            name: ms-ticket-service
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
