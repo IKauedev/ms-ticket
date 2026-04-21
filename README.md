@@ -57,12 +57,6 @@
 ```mermaid
 graph TB
     A[Developer] -->|git push| B[GitHub Repository]
-
-
-## 🔐 Security & Authentication
-
-The service uses **Keycloak** for authentication and authorization (OIDC/OAuth2). All endpoints (exceto registro e saúde) requerem token de acesso válido.
-
     B -->|webhook| C[GitHub Actions]
     C -->|test| D[Maven Test Suite]
     C -->|security scan| E[Trivy Scanner]
