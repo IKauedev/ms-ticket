@@ -12,6 +12,8 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: local
+            - name: SPRING_FLYWAY_ENABLED
+              value: "false"
           resources:
             requests:
               memory: "128Mi"
